@@ -1,0 +1,300 @@
+package Gramaticas.reporteria;
+import java_cup.runtime.*;
+import java.util.*;
+
+parser code {:
+    public void syntax_error(Symbol s) {
+        System.out.println("Error sintáctico en la línea " + (s.left + 1) + " columna " + s.right + ". Token inesperado: " + s.value);
+    }
+ 
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        System.out.println("Error sintáctico irrecuperable en la línea " + (s.left + 1) + " columna " + s.right + ". Token inesperado: " + s.value);
+    }
+:}
+
+// Terminales (sin cambios)
+terminal XSON_VERSION, REALIZAR_SOLICITUD, FIN_SOLICITUD;
+terminal LLAVE_ABRE, LLAVE_CIERRA, CORCHETE_ABRE, CORCHETE_CIERRA, COMA, DOS_PUNTOS;
+terminal SELECCIONAR, REPORTE, FILTRAR, POR, AND, OR, NOT;
+terminal USUARIO_NUEVO, MODIFICAR_USUARIO, ELIMINAR_USUARIO, LOGIN_USUARIO;
+terminal NUEVA_TRIVIA, ELIMINAR_TRIVIA, MODIFICAR_TRIVIA;
+terminal AGREGAR_COMPONENTE, ELIMINAR_COMPONENTE, MODIFICAR_COMPONENTE;
+terminal ID_TRIVIA, USUARIO, PASSWORD, NOMBRE, TIEMPO_PREGUNTA, TEMA, FECHA_CREACION, FECHA_MODIFICACION;
+terminal CAMPO_TEXTO, AREA_TEXTO, CHECKBOX, RADIO, FICHERO, COMBO;
+terminal String IDENTIFIER, STRING;
+terminal Double NUMBER;
+terminal String OPERADOR;
+
+// No terminales (modificados para incluir tipos)
+non terminal Object programa;
+non terminal Map<String, Object> solicitud_xson;
+non terminal List<Map<String, Object>> bloque_parametros, lista_parametros;
+non terminal Map<String, Object> parametro;
+non terminal Object valor;
+non terminal Map<String, Object> consulta_sqlkv;
+non terminal Object filtro;
+non terminal Map<String, Object> condicion;
+non terminal List<String> lista_id_trivias;
+non terminal Map<String, Object> solicitud_usuario, solicitud_trivia, solicitud_componente;
+non terminal String clase_componente;
+non terminal List<String> opciones_componente;
+
+// Precedencias (sin cambios)
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+
+// Gramática con acciones semánticas
+start with programa;
+
+programa ::= solicitud_xson:sx
+           {:
+               RESULT = sx;
+           :}
+           | consulta_sqlkv:cs
+           {:
+               RESULT = cs;
+           :}
+           ;
+
+solicitud_xson ::= XSON_VERSION REALIZAR_SOLICITUD STRING:tipo LLAVE_ABRE bloque_parametros:bp LLAVE_CIERRA FIN_SOLICITUD
+                 {:
+                     Map<String, Object> result = new HashMap<>();
+                     result.put("version", "XSON_VERSION");
+                     result.put("tipo_solicitud", tipo);
+                     result.put("parametros", bp);
+                     RESULT = result;
+                 :}
+                 ;
+
+bloque_parametros ::= IDENTIFIER:nombre DOS_PUNTOS CORCHETE_ABRE lista_parametros:lp CORCHETE_CIERRA
+                    {:
+                        RESULT = lp;
+                    :}
+                    ;
+
+lista_parametros ::= parametro:p
+                   {:
+                       List<Map<String, Object>> list = new ArrayList<>();
+                       list.add(p);
+                       RESULT = list;
+                   :}
+                   | lista_parametros:lp COMA parametro:p
+                   {:
+                       lp.add(p);
+                       RESULT = lp;
+                   :}
+                   ;
+
+parametro ::= LLAVE_ABRE lista_parametros:lp LLAVE_CIERRA
+            {:
+                Map<String, Object> map = new HashMap<>();
+                map.put("subparametros", lp);
+                RESULT = map;
+            :}
+            | IDENTIFIER:nombre DOS_PUNTOS valor:v
+            {:
+                Map<String, Object> map = new HashMap<>();
+                map.put(nombre, v);
+                RESULT = map;
+            :}
+            ;
+
+valor ::= STRING:s
+        {:
+            RESULT = s;
+        :}
+        | NUMBER:n
+        {:
+            RESULT = n;
+        :}
+        | IDENTIFIER:id
+        {:
+            RESULT = id;
+        :}
+        ;
+
+solicitud_usuario ::= USUARIO_NUEVO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "USUARIO_NUEVO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | MODIFICAR_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "MODIFICAR_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | ELIMINAR_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "ELIMINAR_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | LOGIN_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "LOGIN_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    ;
+
+solicitud_trivia ::= NUEVA_TRIVIA solicitud_xson:sx
+                   {:
+                       Map<String, Object> result = new HashMap<>();
+                       result.put("tipo", "NUEVA_TRIVIA");
+                       result.put("datos", sx);
+                       RESULT = result;
+                   :}
+                   | ELIMINAR_TRIVIA solicitud_xson:sx
+                   {:
+                       Map<String, Object> result = new HashMap<>();
+                       result.put("tipo", "ELIMINAR_TRIVIA");
+                       result.put("datos", sx);
+                       RESULT = result;
+                   :}
+                   | MODIFICAR_TRIVIA solicitud_xson:sx
+                   {:
+                       Map<String, Object> result = new HashMap<>();
+                       result.put("tipo", "MODIFICAR_TRIVIA");
+                       result.put("datos", sx);
+                       RESULT = result;
+                   :}
+                   ;
+
+solicitud_componente ::= AGREGAR_COMPONENTE solicitud_xson:sx
+                       {:
+                           Map<String, Object> result = new HashMap<>();
+                           result.put("tipo", "AGREGAR_COMPONENTE");
+                           result.put("datos", sx);
+                           RESULT = result;
+                       :}
+                       | ELIMINAR_COMPONENTE solicitud_xson:sx
+                       {:
+                           Map<String, Object> result = new HashMap<>();
+                           result.put("tipo", "ELIMINAR_COMPONENTE");
+                           result.put("datos", sx);
+                           RESULT = result;
+                       :}
+                       | MODIFICAR_COMPONENTE solicitud_xson:sx
+                       {:
+                           Map<String, Object> result = new HashMap<>();
+                           result.put("tipo", "MODIFICAR_COMPONENTE");
+                           result.put("datos", sx);
+                           RESULT = result;
+                       :}
+                       ;
+
+clase_componente ::= CAMPO_TEXTO
+                   {:
+                       RESULT = "CAMPO_TEXTO";
+                   :}
+                   | AREA_TEXTO
+                   {:
+                       RESULT = "AREA_TEXTO";
+                   :}
+                   | CHECKBOX
+                   {:
+                       RESULT = "CHECKBOX";
+                   :}
+                   | RADIO
+                   {:
+                       RESULT = "RADIO";
+                   :}
+                   | FICHERO
+                   {:
+                       RESULT = "FICHERO";
+                   :}
+                   | COMBO
+                   {:
+                       RESULT = "COMBO";
+                   :}
+                   ;
+
+opciones_componente ::= STRING:s
+                      {:
+                          List<String> opciones = new ArrayList<>();
+                          opciones.add(s);
+                          RESULT = opciones;
+                      :}
+                      | opciones_componente:oc COMA STRING:s
+                      {:
+                          oc.add(s);
+                          RESULT = oc;
+                      :}
+                      ;
+
+consulta_sqlkv ::= SELECCIONAR REPORTE lista_id_trivias:lid filtro:f
+                 {:
+                     Map<String, Object> result = new HashMap<>();
+                     result.put("tipo", "CONSULTA_SQLKV");
+                     result.put("id_trivias", lid);
+                     result.put("filtro", f);
+                     RESULT = result;
+                 :}
+                 ;
+
+lista_id_trivias ::= IDENTIFIER:id
+                   {:
+                       List<String> ids = new ArrayList<>();
+                       ids.add(id);
+                       RESULT = ids;
+                   :}
+                   | lista_id_trivias:lid COMA IDENTIFIER:id
+                   {:
+                       lid.add(id);
+                       RESULT = lid;
+                   :}
+                   ;
+
+filtro ::= /* empty */
+         {:
+             RESULT = null;
+         :}
+         | FILTRAR POR condicion:c
+         {:
+             RESULT = c;
+         :}
+         ;
+
+condicion ::= IDENTIFIER:campo OPERADOR:op valor:v
+            {:
+                Map<String, Object> cond = new HashMap<>();
+                cond.put("campo", campo);
+                cond.put("operador", op);
+                cond.put("valor", v);
+                RESULT = cond;
+            :}
+            | condicion:c1 AND condicion:c2
+            {:
+                Map<String, Object> cond = new HashMap<>();
+                cond.put("tipo", "AND");
+                cond.put("izquierda", c1);
+                cond.put("derecha", c2);
+                RESULT = cond;
+            :}
+            | condicion:c1 OR condicion:c2
+            {:
+                Map<String, Object> cond = new HashMap<>();
+                cond.put("tipo", "OR");
+                cond.put("izquierda", c1);
+                cond.put("derecha", c2);
+                RESULT = cond;
+            :}
+            | NOT condicion:c
+            {:
+                Map<String, Object> cond = new HashMap<>();
+                cond.put("tipo", "NOT");
+                cond.put("condicion", c);
+                RESULT = cond;
+            :}
+            | LLAVE_ABRE condicion:c LLAVE_CIERRA
+            {:
+                RESULT = c;
+            :}
+            ;

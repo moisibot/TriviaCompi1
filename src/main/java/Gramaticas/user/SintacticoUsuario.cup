@@ -1,0 +1,123 @@
+package Gramaticas.user;
+
+import java_cup.runtime.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+parser code {:
+    public void syntax_error(Symbol s) {
+        System.out.println("Error sintáctico en la línea " + (s.left + 1) + " columna " + s.right + ". Token inesperado: " + s.value);
+    }
+ 
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        System.out.println("Error sintáctico irrecuperable en la línea " + (s.left + 1) + " columna " + s.right + ". Token inesperado: " + s.value);
+    }
+:};
+
+// Terminales
+terminal XSON_VERSION, REALIZAR_SOLICITUD, FIN_SOLICITUD;
+terminal LLAVE_ABRE, LLAVE_CIERRA, CORCHETE_ABRE, CORCHETE_CIERRA, COMA, DOS_PUNTOS;
+terminal USUARIO_NUEVO, MODIFICAR_USUARIO, ELIMINAR_USUARIO, LOGIN_USUARIO;
+terminal USUARIO, PASSWORD, NOMBRE;
+terminal String IDENTIFIER, STRING;
+terminal Double NUMBER;
+
+// No terminales
+non terminal Map<String, Object> programa;
+non terminal Map<String, Object> solicitud_xson;
+non terminal List<Map<String, Object>> bloque_parametros;
+non terminal List<Map<String, Object>> lista_parametros;
+non terminal Map<String, Object> parametro;
+non terminal Object valor;
+non terminal Map<String, Object> solicitud_usuario;
+
+// Gramática
+start with programa;
+
+programa ::= solicitud_usuario:su
+           {:
+               RESULT = su;
+           :};
+
+solicitud_usuario ::= USUARIO_NUEVO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "USUARIO_NUEVO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | MODIFICAR_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "MODIFICAR_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | ELIMINAR_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "ELIMINAR_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :}
+                    | LOGIN_USUARIO solicitud_xson:sx
+                    {:
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("tipo", "LOGIN_USUARIO");
+                        result.put("datos", sx);
+                        RESULT = result;
+                    :};
+
+solicitud_xson ::= XSON_VERSION REALIZAR_SOLICITUD STRING:tipo LLAVE_ABRE bloque_parametros:bp LLAVE_CIERRA FIN_SOLICITUD
+                 {:
+                     Map<String, Object> result = new HashMap<>();
+                     result.put("version", "XSON_VERSION");
+                     result.put("tipo_solicitud", tipo);
+                     result.put("parametros", bp);
+                     RESULT = result;
+                 :};
+
+bloque_parametros ::= IDENTIFIER:nombre DOS_PUNTOS CORCHETE_ABRE lista_parametros:lp CORCHETE_CIERRA
+                    {:
+                        RESULT = lp;
+                    :};
+
+lista_parametros ::= parametro:p
+                   {:
+                       List<Map<String, Object>> list = new ArrayList<>();
+                       list.add(p);
+                       RESULT = list;
+                   :}
+                   | lista_parametros:lp COMA parametro:p
+                   {:
+                       lp.add(p);
+                       RESULT = lp;
+                   :};
+
+parametro ::= LLAVE_ABRE lista_parametros:lp LLAVE_CIERRA
+            {:
+                Map<String, Object> map = new HashMap<>();
+                map.put("subparametros", lp);
+                RESULT = map;
+            :}
+            | IDENTIFIER:nombre DOS_PUNTOS valor:v
+            {:
+                Map<String, Object> map = new HashMap<>();
+                map.put(nombre, v);
+                RESULT = map;
+            :};
+
+valor ::= STRING:s
+        {:
+            RESULT = s;
+        :}
+        | NUMBER:n
+        {:
+            RESULT = n;
+        :}
+        | IDENTIFIER:id
+        {:
+            RESULT = id;
+        :};
